@@ -27,7 +27,7 @@ const serverlessConfiguration: AWS = {
       IMAGES_S3_BUCKET: 'serverless-udagram-dev',
       SIGNED_URL_EXPIRATION: '${self:custom.expiration}',
       CONNECTIONS_TABLE: 'Connection-${self:custom.stage}',
-      THUMBNAILS_S3_BUCKET: 'serverless-thumbnail-${self:custom.stage}'
+      THUMBNAILS_S3_BUCKET: 'serverless-thumbnail0075-${self:custom.stage}'
     },
 
     // IAM role definition for access to Dynamo DB
@@ -324,32 +324,32 @@ const serverlessConfiguration: AWS = {
       },
 
       // SNS policy
-      SNSTopicPolicy: {
-        Type: "AWS::SNS::TopicPolicy",
-        Properties: {
-          PolicyDocument: {
-            Version: "2012-10-17",
-            Statement: [
-              {
-                Effect: "Allow",
-                Principal: {
-                  AWS: "*"
-                },
-                Action: "sns:Publish",
-                Resource: "ImagesTopic",
-                Condition: {
-                  ArnLike: {
-                    'AWS:SourceArn': "arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}"
-                  }
-                }
-              }
-            ]
-          },
-          Topics: [
-            "ImagesTopic"
-          ]
-        }
-        },
+      // SNSTopicPolicy: {
+      //   Type: "AWS::SNS::TopicPolicy",
+      //   Properties: {
+      //     PolicyDocument: {
+      //       Version: "2012-10-17",
+      //       Statement: [
+      //         {
+      //           Effect: "Allow",
+      //           Principal: {
+      //             AWS: "*"
+      //           },
+      //           Action: "sns:Publish",
+      //           Resource: "ImagesTopic",
+      //           Condition: {
+      //             ArnLike: {
+      //               'AWS:SourceArn': "arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}"
+      //             }
+      //           }
+      //         }
+      //       ]
+      //     },
+      //     Topics: [
+      //       "ImagesTopic"
+      //     ]
+      //   }
+      //   },
 
       // Thumbnail Bucket
       ThumbnailsBucket: {
