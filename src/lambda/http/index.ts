@@ -23,6 +23,7 @@ export const createGroups = {
         method: 'post',
         path: 'groups',
         cors: true,
+        authorizer: 'Rs256Auth',
         reqValidatorName: 'RequestBodyValidator',
         documentation: {
           summary: 'Create a new group',
@@ -73,6 +74,7 @@ export const createImage = {
         method: 'post',
         path: 'groups/{groupId}/images',
         cors: true,
+        authorizer: 'Rs256Auth',
         reqValidatorName: 'RequestBodyValidator',
         documentation: {
           summary: 'Create a new image',

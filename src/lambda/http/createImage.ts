@@ -1,7 +1,9 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult, APIGatewayProxyHandler } from 'aws-lambda'
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import 'source-map-support/register'
 import * as AWS  from 'aws-sdk'
 import * as uuid from 'uuid'
+import middy from '@middy/core';
+import cors from '@middy/http-cors';
 
 const docClient = new AWS.DynamoDB.DocumentClient();
 const s3 = new AWS.S3({
@@ -14,7 +16,7 @@ const bucketName = process.env.IMAGES_S3_BUCKET;
 const urlExpiration = process.env.SIGNED_URL_EXPIRATION;
 
 // create Single Image Function 
-export const createImage: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export const createImage = middy( async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     console.log('Caller event', event)
     const groupId = event.pathParameters.groupId
     const validGroupId = await groupExists(groupId)
@@ -38,16 +40,13 @@ export const createImage: APIGatewayProxyHandler = async (event: APIGatewayProxy
 
         return {
         statusCode: 201,
-        headers: {
-            'Access-Control-Allow-Origin': '*'
-        },
         body: JSON.stringify({
             newItem: newItem, 
             // signedUrl for image 
             uploadUrl: url
         })
         }
-    }
+    })
     
     // helper function to check if group exists
     async function groupExists(groupId: string) {
@@ -96,3 +95,10 @@ async function createImageById(groupId: string, imageId: string, event: any) {
             Expires: parseInt(urlExpiration)
         })
     }
+
+    // using middy CORS middleware 
+    createImage.use(
+        cors({
+            credentials:true,
+        })
+    )

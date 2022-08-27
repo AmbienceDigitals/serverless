@@ -6,10 +6,9 @@ export const elasticSearch = {
     events: [
         {
         stream: {
-            type: 'kinesis',
+            type: 'dynamodb',
             arn: {
-                'Fn::GetAtt': ['ImagesDynamoDBTable', 'Arn']
-                // GetAtt: 'ImagesDynamoDBTable.StreamArn'
+                'Fn::GetAtt': ['ImagesDynamoDBTable', 'StreamArn']
             }
         },
         },

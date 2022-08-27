@@ -2,4 +2,5 @@ export { getGroups, createGroups, getImages, getImage, createImage } from './htt
 export { sendNotifications, resizeImage} from './s3'
 export { connect, disconnect} from './websocket'
 export { elasticSearch} from './dynamoDb'
+export { Auth} from './auth'
 
