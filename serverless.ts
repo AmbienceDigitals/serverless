@@ -11,7 +11,13 @@ const serverlessConfiguration: AWS = {
   service: 'serverless',
   frameworkVersion: '3',
   useDotenv: true,
-  plugins: ['serverless-esbuild', 'serverless-aws-documentation', 'serverless-reqvalidator-plugin'],
+  plugins: ['serverless-esbuild', 
+  'serverless-aws-documentation', 
+  'serverless-reqvalidator-plugin',
+  'serverless-plugin-canary-deployments',
+  'serverless-iam-roles-per-function',
+  'serverless-dynamodb-local',
+  'serverless-offline'],
   provider: {
     name: 'aws',
     runtime: 'nodejs14.x',
@@ -19,13 +25,18 @@ const serverlessConfiguration: AWS = {
       minimumCompressionSize: 1024,
       shouldStartNameWithService: true,
     },
+    // X-Ray tracing 
+    tracing: {
+      lambda: true,
+      apiGateway: true,
+    },
     environment: {
       AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
       NODE_OPTIONS: '--enable-source-maps --stack-trace-limit=1000',
-      GROUPS_TABLE: 'group-dev',
-      IMAGES_TABLE: 'Images-dev',
-      IMAGE_ID_iNDEX: 'ImageIdIndex',
-      IMAGES_S3_BUCKET: 'serverless-udagram-dev',
+      GROUPS_TABLE: 'group-${self:custom.stage}',
+      IMAGES_TABLE: 'Images-${self:custom.stage}',
+      IMAGE_ID_INDEX: 'ImageIdIndex',
+      IMAGES_S3_BUCKET: 'serverless-udagram-${self:custom.stage}',
       SIGNED_URL_EXPIRATION: '${self:custom.expiration}',
       CONNECTIONS_TABLE: 'Connection-${self:custom.stage}',
       THUMBNAILS_S3_BUCKET: 'serverless-thumbnail0075-${self:custom.stage}',
@@ -45,7 +56,7 @@ const serverlessConfiguration: AWS = {
             "dynamodb:GetItem",
             "dynamodb:PutItem",
           ],
-          Resource: "arn:aws:dynamodb:us-east-1:*:table/group-dev",
+          Resource: "arn:aws:dynamodb:${self:custom.region}:*:table/${self:provider.environment.GROUPS_TABLE}",
         },
         {
           Effect: 'Allow',
@@ -53,14 +64,14 @@ const serverlessConfiguration: AWS = {
             "dynamodb:Query",
             "dynamodb:PutItem",
           ],
-          Resource: 'arn:aws:dynamodb:us-east-1:*:table/Images-dev'
+          Resource: 'arn:aws:dynamodb:${self:custom.region}:*:table/${self:provider.environment.IMAGES_TABLE}'
         },
         {
           Effect: 'Allow',
           Action: [
             "dynamodb:Query",
           ],
-          Resource: 'arn:aws:dynamodb:us-east-1:*:table/Images-dev/index/ImageIdIndex'
+          Resource: 'arn:aws:dynamodb:${self:custom.region}:*:table/${self:provider.environment.IMAGES_TABLE}/index/${self:provider.environment.IMAGE_ID_INDEX}'
         },
         {
           Effect: 'Allow',
@@ -104,6 +115,13 @@ const serverlessConfiguration: AWS = {
             "Fn::GetAtt": ["KMSKey", "Arn"]
           }
         },
+        {
+          Effect: 'Allow',
+          Action: [
+            "codedeploy: *"
+          ],
+          Resource: ["*"]
+        }
       ],
       },
     },
@@ -131,6 +149,20 @@ const serverlessConfiguration: AWS = {
     region: 'us-east-1',
     expiration: 300,
     topicName:'imagesTopic-${self:custom.stage}',
+
+    // serverless offline plugin setting
+    'serverless-offline': {
+      port: 3003
+    },
+
+    // dynamodb local settings for dynamodb-offline plugin
+    dynamodb:{
+      stages: ['${self:custom.stage}'],
+      start:{
+        port: 8000,
+        inMemory: true,
+        migrate: true,
+      }},
     // AWS documentation for API
     documentation: {
       api: {
@@ -220,7 +252,7 @@ const serverlessConfiguration: AWS = {
         ],
           GlobalSecondaryIndexes: [
             {
-              IndexName: 'ImageIdIndex',
+              IndexName: '${self:provider.environment.IMAGE_ID_INDEX}',
               KeySchema: [
                 {
                   AttributeName: "imageId",
@@ -236,7 +268,28 @@ const serverlessConfiguration: AWS = {
           StreamSpecification: {
             StreamViewType: 'NEW_IMAGE'
           },
-          TableName: 'Images-dev',
+          TableName: '${self:provider.environment.IMAGES_TABLE}',
+        }
+      },
+
+      // Websocket connection dynamodb table 
+      WebSocketConnectionsDynamoDBTable: {
+        Type: "AWS::DynamoDB::Table",
+        Properties: {
+          AttributeDefinitions: [
+            {
+              AttributeName: "id",
+              AttributeType: "S"
+            }
+          ],
+          KeySchema: [
+            {
+              AttributeName: "id",
+              KeyType: "HASH"
+            }
+          ],
+          BillingMode: "PAY_PER_REQUEST",
+          TableName: "${self:provider.environment.CONNECTIONS_TABLE}"
         }
       },
 
@@ -247,7 +300,7 @@ const serverlessConfiguration: AWS = {
           "SNSTopicPolicy"
         ],
         Properties: {
-          BucketName: "serverless-udagram-dev",
+          BucketName: "${self:provider.environment.IMAGES_S3_BUCKET}",
           NotificationConfiguration:{
             TopicConfigurations: [{
               Event: 's3:ObjectCreated:Put',
@@ -292,7 +345,7 @@ const serverlessConfiguration: AWS = {
                 Effect: 'Allow',
                 Principal: '*',
                 Action: 's3:GetObject',
-                Resource: 'arn:aws:s3:::serverless-udagram-dev/*'
+                Resource: 'arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*'
               }
             ]
           },

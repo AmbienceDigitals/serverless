@@ -2,7 +2,7 @@ import { handlerPath } from '@libs/handler-resolver';
 
 // getGroups function
 export const getGroups = {
-  handler: `${handlerPath(__dirname)}/handler.getGroups`,
+  handler: `${handlerPath(__dirname)}/getGroups.handler`,
   events: [
     {
       http: {
@@ -16,7 +16,7 @@ export const getGroups = {
 
 // createGroups function
 export const createGroups = {
-  handler: `${handlerPath(__dirname)}/handler.createGroups`,
+  handler: `${handlerPath(__dirname)}/createGroups.handler`,
   events: [
     {
       http: {
@@ -35,6 +35,10 @@ export const createGroups = {
       },
     },
   ],
+  deploymentSettings: {
+    type: 'Linear10PercentEvery1Minute',
+    alias: 'Live'
+  }
 };
 
 // createGroups function
@@ -47,6 +51,26 @@ export const getImages = {
         path: 'groups/{groupId}/images',
         cors: true,
       },
+      iam: {
+        role: {
+          statements: [
+            {
+              Effect: 'Allow',
+              Action:{
+                dynamodb:'Query'
+              },
+              Resource: 'arn:aws:dynamodb:${self:custom.region}:*:table/${self:provider.environment.IMAGES_TABLE}'
+            },
+            {
+              Effect: 'Allow',
+              Action:{
+                dynamodb:'GetItem'
+              },
+              Resource: 'arn:aws:dynamodb:${self:custom.region}:*:table/${self:provider.environment.GROUPS_TABLE}'
+            },
+          ]
+        }
+      }
     },
   ],
 };

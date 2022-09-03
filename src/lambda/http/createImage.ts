@@ -4,11 +4,16 @@ import * as AWS  from 'aws-sdk'
 import * as uuid from 'uuid'
 import middy from '@middy/core';
 import cors from '@middy/http-cors';
+import * as AWSXRay from 'aws-xray-sdk'
 
-const docClient = new AWS.DynamoDB.DocumentClient();
-const s3 = new AWS.S3({
+// using AWS XRay to capture trace of calls to other AWS Services
+const XAWS = AWSXRay.captureAWS(AWS)
+
+// tracing using X-Ray with dynamoDB
+const docClient = new XAWS.DynamoDB.DocumentClient()
+const s3 = new XAWS.S3({
     signatureVersion: 'v4'
-});
+})
 
 const groupsTable = process.env.GROUPS_TABLE;
 const imagesTable = process.env.IMAGES_TABLE;
@@ -47,6 +52,13 @@ export const createImage = middy( async (event: APIGatewayProxyEvent): Promise<A
         })
         }
     })
+
+    // using middy CORS middleware 
+    createImage.use(
+        cors({
+            credentials:true,
+        })
+    )
     
     // helper function to check if group exists
     async function groupExists(groupId: string) {
@@ -88,17 +100,10 @@ async function createImageById(groupId: string, imageId: string, event: any) {
     };
 
     // helper function to get signedURL to upload image
-    function getUploadUrl(imageId: string) {
-        return s3.getSignedUrl('putObject', {
-            Bucket: bucketName,
-            Key: imageId,
-            Expires: parseInt(urlExpiration)
-        })
-    }
-
-    // using middy CORS middleware 
-    createImage.use(
-        cors({
-            credentials:true,
-        })
-    )
+function getUploadUrl(imageId: string) {
+    return s3.getSignedUrl('putObject', {
+        Bucket: bucketName,
+        Key: imageId,
+        Expires: parseInt(urlExpiration)
+    })
+}
